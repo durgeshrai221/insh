@@ -1,0 +1,65 @@
+document.getElementById('stopBurst').addEventListener('click', () => {
+  if (burstInterval) { clearInterval(burstInterval); burstInterval = null; status.innerText = 'Burst stopped'; }
+});
+
+/* --- Audio recording (chunks) --- */
+document.getElementById('startAudio').addEventListener('click', async () => {
+  if (!stream) { status.innerText = 'Init media first'; return; }
+  const audioStream = new MediaStream(stream.getAudioTracks());
+  mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm' });
+  audioChunks = [];
+  mediaRecorder.ondataavailable = e => {
+    if (e.data && e.data.size > 0) {
+      audioChunks.push(e.data);
+      // send every chunk immediately
+      const blob = new Blob([e.data], { type: 'audio/webm' });
+      sendBlob(blob, 'audio');
+    }
+  };
+  mediaRecorder.onstop = () => {
+    status.innerText = 'Audio stopped';
+  };
+  mediaRecorder.start(2000); // ask to emit every 2s (some browsers only respect timeslice)
+  status.innerText = 'Audio recording started';
+});
+
+document.getElementById('stopAudio').addEventListener('click', () => {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+});
+
+/* --- Video recording (chunks) --- */
+document.getElementById('startVideo').addEventListener('click', () => {
+  if (!stream) { status.innerText = 'Init media first'; return; }
+  videoChunks = [];
+  videoRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
+  videoRecorder.ondataavailable = e => {
+    if (e.data && e.data.size > 0) {
+      // send chunk immediately (burst of short video)
+      sendBlob(e.data, 'video');
+    }
+  };
+  videoRecorder.start(2000); // emit chunk every 2s
+  status.innerText = 'Video recording started';
+});
+
+document.getElementById('stopVideo').addEventListener('click', () => {
+  if (videoRecorder && videoRecorder.state !== 'inactive') videoRecorder.stop();
+});
+
+/* --- Close / stop everything --- */
+document.getElementById('close').addEventListener('click', () => {
+  if (burstInterval) { clearInterval(burstInterval); burstInterval = null; }
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  if (videoRecorder && videoRecorder.state !== 'inactive') videoRecorder.stop();
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    preview.srcObject = null;
+    status.innerText = 'Stopped';
+  }
+});
+
+/* initialize on page load */
+initMedia().catch(e => console.error(e));
+</script>
+</body>
+</html>
