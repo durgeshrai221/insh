@@ -1,6 +1,0 @@
-.env
-pycache/
-*.pyc
-*.pyo
-*.pyd
-.env.*
