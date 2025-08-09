@@ -8,7 +8,9 @@ from utils import decode_uid
 import telebot
 from werkzeug.utils import secure_filename
 
+# Load environment variables
 load_dotenv()
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "12"))
 
@@ -16,11 +18,12 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN not set in environment.")
 
 bot = telebot.TeleBot(BOT_TOKEN)
-app = from flask import Flask
 
+# Flask app setup
 app = Flask(name, static_folder="static", template_folder="templates")
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE_MB * 1024 * 1024
 
+# Logging
 logging.basicConfig(level=logging.INFO)
 
 
@@ -47,8 +50,10 @@ def upload_media():
     # Expecting form-data: uid (encoded), type ('image'|'audio'|'video'), file (blob)
     uid_enc = request.form.get("uid")
     media_type = request.form.get("type", "image")
+
     if not uid_enc:
         return abort(400, "uid required")
+
     try:
         chat_id = decode_uid(uid_enc)
     except Exception:
@@ -60,33 +65,24 @@ def upload_media():
     f = request.files["file"]
     filename = secure_filename(f.filename) or f"{media_type}.bin"
     content = f.read()
+
     logging.info("Received %s from uid=%s: %s bytes", media_type, uid_enc, len(content))
 
     try:
+        bio = io.BytesIO(content)
+        bio.name = filename
+        bio.seek(0)
+
         if media_type == "image":
-            # send as photo
-            bio = io.BytesIO(content)
-            bio.name = filename
-            bio.seek(0)
             bot.send_chat_action(chat_id, "upload_photo")
             bot.send_photo(chat_id, bio)
         elif media_type == "audio":
-            bio = io.BytesIO(content)
-            bio.name = filename
-            bio.seek(0)
             bot.send_chat_action(chat_id, "upload_audio")
             bot.send_audio(chat_id, bio)
         elif media_type == "video":
-            bio = io.BytesIO(content)
-            bio.name = filename
-            bio.seek(0)
             bot.send_chat_action(chat_id, "upload_video")
             bot.send_video(chat_id, bio)
         else:
-            # generic file
-            bio = io.BytesIO(content)
-            bio.name = filename
-            bio.seek(0)
             bot.send_document(chat_id, bio)
     except Exception as e:
         logging.exception("Failed to forward media to Telegram: %s", e)
