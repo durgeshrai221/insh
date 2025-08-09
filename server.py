@@ -16,6 +16,8 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN not set in environment.")
 
 bot = telebot.TeleBot(BOT_TOKEN)
+app = from flask import Flask
+
 app = Flask(name, static_folder="static", template_folder="templates")
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE_MB * 1024 * 1024
 
