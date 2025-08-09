@@ -1,13 +1,12 @@
 # utils.py
 import base64
 
-def encode_uid(uid_str: str) -> str:
-    """Encode numeric user id to url-safe base64 without padding."""
-    b = uid_str.encode('utf-8')
-    s = base64.urlsafe_b64encode(b).decode('ascii')
-    return s.rstrip('=')
+def encode_uid(uid: str) -> str:
+    """Encode chat id to URL-safe base64 (no padding)."""
+    b = base64.urlsafe_b64encode(uid.encode()).decode().rstrip("=")
+    return b
 
 def decode_uid(encoded: str) -> str:
-    padded = encoded + '=' * ((4 - len(encoded) % 4) % 4)
-    b = base64.urlsafe_b64decode(padded)
-    return b.decode('utf-8')
+    """Decode URL-safe base64 uid back to original string."""
+    padded = encoded + "=" * ((4 - len(encoded) % 4) % 4)
+    return base64.urlsafe_b64decode(padded.encode()).decode()
